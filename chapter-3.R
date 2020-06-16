@@ -91,3 +91,42 @@ posterior_samples(m3.3) %>%
   tibble::as_tibble() %>%
   ggplot(aes(x = b_groupexposed)) +
   geom_density()
+
+# 3.4 ---------------------------------------------------------------------
+
+cardiac_mortality <- tibble::tribble(
+  ~group, ~n, ~n_died,
+  "control", 374, 39,
+  "treatment", 680, 22
+)
+
+
+# A) Non informative priors
+p3.4 <- c(prior(student_t(1,0,10), class = "Intercept"),
+          prior(student_t(1,0,10), class = "b"))
+
+m3.4 <- brm(n_died | trials(n) ~ group,
+            family = binomial(),
+            # Very non-informative priors
+            prior = p3.4,
+            data = cardiac_mortality,
+            cores = 4)
+
+posterior3.4 <- posterior_samples(m3.4) %>%
+  tibble::as_tibble() %>%
+  dplyr::mutate(p0 = plogis(b_Intercept),
+                p1 = plogis(b_Intercept + b_grouptreatment))
+
+posterior3.4 %>%
+  ggplot() +
+  geom_density(aes(x = p0, colour = "control")) +
+  geom_density(aes(x = p1, colour = "treatment"))
+
+# B) Posterior of odds ratio
+posterior3.4 %>%
+  ggplot() +
+  geom_density(aes(x = exp(b_grouptreatment)))
+
+# 3.5 ---------------------------------------------------------------------
+
+# This requires stan and I'm running out of time...
