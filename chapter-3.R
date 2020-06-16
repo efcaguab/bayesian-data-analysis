@@ -16,8 +16,10 @@ poll_data <- tibble::tribble(
 poll_data$y <- with(poll_data, cbind(bush, dukakis, other))
 
 # Note that I didn't specify any prior so might be using whatever defaults brms
-# has
-m3.2 <- brm(bf(y | trials(size) ~ survey, a ~ bush),
+# has. I checked and there are weakly informative student t priors. Note that
+# for practical effects using a predictor here is equivalent to fitting two
+# independent multinomials?
+m3.2 <- brm(bf(y | trials(size) ~ survey),
             data = poll_data,
             family = multinomial(),
             cores = 4)
@@ -59,3 +61,33 @@ probabilities_bush %$% {
   difference <- a2 - a1
   sum(difference > 0) / length(difference)
 }
+
+# 3.3 ---------------------------------------------------------------------
+
+chikens <- tibble::tribble(
+  ~group, ~ n, ~mean_flow, ~ sd_flow,
+  "control", 32, 1.013, 0.24,
+  "exposed", 36, 1.173, 0.20
+) %>%
+  dplyr::mutate(standard_error = (sd_flow ^ 2) / sqrt(n))
+
+# Wondering whether doing this properly would imply making sigma also depend on
+# the group? I tried that but computer says no. Also, I have no idea how to
+# specify an uniform prior for the logarithm of sigma. Presumably something
+# specifying sigmalink = "log" and then some bounds?
+m3.3 <- brm(bf(mean_flow | se(standard_error) ~ group),
+            prior = c(set_prior("uniform(0, 2)", class = "Intercept")),
+            data = chikens,
+            cores = 4)
+
+# A) Posterior distribution of mu_0
+posterior_samples(m3.3) %>%
+  tibble::as_tibble() %>%
+  ggplot(aes(x = b_Intercept)) +
+  geom_density()
+
+# B) Posterior distribution of mu_t - mu_0
+posterior_samples(m3.3) %>%
+  tibble::as_tibble() %>%
+  ggplot(aes(x = b_groupexposed)) +
+  geom_density()
