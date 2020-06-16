@@ -15,6 +15,8 @@ poll_data <- tibble::tribble(
 
 poll_data$y <- with(poll_data, cbind(bush, dukakis, other))
 
+# Note that I didn't specify any prior so might be using whatever defaults brms
+# has
 m3.2 <- brm(bf(y | trials(size) ~ survey, a ~ bush),
             data = poll_data,
             family = multinomial(),
